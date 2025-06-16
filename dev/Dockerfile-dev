@@ -7,7 +7,7 @@ RUN npm install -g http-server
 WORKDIR /usr/src/app
 
 # Copiamos el código fuente
-COPY ../app .
+COPY ../aplicacion .
 
 # Exponemos el puerto 8080 para desarrollo
 EXPOSE 8080

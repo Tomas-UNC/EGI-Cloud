@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Juego de la Serpiente</title>
+  <style>
+    body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    canvas { background: #111; border: 2px solid #0f0; }
+    h2 { color: #0f0; text-align: center; }
+    .mensaje { color: #0f0; text-align: center; }
+    #overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 10;
+      display: none;
+    }
+    #overlay-content {
+      background: #222; border: 2px solid #0f0; border-radius: 10px; padding: 2em; text-align: center;
+      max-width: 90vw;
+      min-width: 320px;
+      box-sizing: border-box;
+      overflow-x: auto;
+    }
+    #tabla-puntajes {
+      margin: 1em 0;
+      max-width: 100%;
+      overflow-x: auto;
+      display: block;
+    }
+    table {
+      margin: 1em auto;
+      border-collapse: collapse;
+      background: #111;
+      color: #0f0;
+      min-width: 200px;
+    }
+    th, td {
+      border: 1px solid #0f0;
+      padding: 0.5em 1em;
+    }
+    th {
+      background: #222;
+    }
+    #overlay button {
+      margin: 0.5em;
+      padding: 0.7em 1.5em;
+      background: #0f0; color: #111;
+      border: none; border-radius: 5px;
+      cursor: pointer;
+      font-size: 1em;
+    }
+    #overlay button:hover {
+      background: #fff; color: #0f0;
+    }
+    #logout-btn {
+      margin-top: 1em;
+      color: #fff;
+      background: #f00;
+      border: none;
+      border-radius: 5px;
+      padding: 0.5em 1em;
+      cursor: pointer;
+    }
+    #logout-btn:hover {
+      background: #fff;
+      color: #f00;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h2>Juego de la Serpiente</h2>
+    <canvas id="game" width="400" height="400"></canvas>
+    <p class="mensaje">Usa las flechas para mover la serpiente</p>
+  </div>
+  <div id="overlay">
+    <div id="overlay-content">
+      <h3 id="mensaje-final"></h3>
+      <div id="extra-options"></div>
+      <div id="tabla-puntajes"></div>
+      <button onclick="reiniciarJuego()">Volver a jugar</button>
+      <button onclick="salirJuego()">Salir</button>
+      <button id="logout-btn" onclick="cerrarSesion()" style="display:none;">Cerrar sesión</button>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const box = 20;
+    let snake, direction, food, score, gameOver;
+
+    // Guardar y obtener usuario y puntajes localmente
+    function obtenerUsuarioGuardado() {
+      const user = localStorage.getItem('snake_username');
+      if (user) return user;
+      return null;
+    }
+    function guardarUsuario(username) {
+      localStorage.setItem('snake_username', username);
+    }
+    function borrarUsuario() {
+      localStorage.removeItem('snake_username');
+    }
+    function guardarPuntaje(username, score) {
+      let data = JSON.parse(localStorage.getItem('snake_users') || '{}');
+      if (!data[username]) data[username] = [];
+      data[username].push(score);
+      localStorage.setItem('snake_users', JSON.stringify(data));
+    }
+    function obtenerPuntajes(username) {
+      let data = JSON.parse(localStorage.getItem('snake_users') || '{}');
+      return data[username] || [];
+    }
+
+    function iniciarVariables() {
+      snake = [{x: 10 * box, y: 10 * box}];
+      direction = null;
+      food = {
+        x: Math.floor(Math.random() * 20) * box,
+        y: Math.floor(Math.random() * 20) * box
+      };
+      score = 0;
+      gameOver = false;
+    }
+    iniciarVariables();
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+      else if (e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+      else if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+      else if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+    });
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Dibujar comida
+      ctx.fillStyle = 'red';
+      ctx.fillRect(food.x, food.y, box, box);
+
+      // Dibujar serpiente
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? '#0f0' : '#0a0';
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      // Dibujar puntuación
+      ctx.fillStyle = '#fff';
+      ctx.font = '18px Arial';
+      ctx.fillText('Puntuación: ' + score, 10, 390);
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      let head = { x: snake[0].x, y: snake[0].y };
+      if (direction === 'UP') head.y -= box;
+      if (direction === 'DOWN') head.y += box;
+      if (direction === 'LEFT') head.x -= box;
+      if (direction === 'RIGHT') head.x += box;
+
+      // Si no hay dirección aún, no mover
+      if (!direction) return;
+
+      // Condiciones de game over
+      if (
+        head.x < 0 || head.x >= canvas.width ||
+        head.y < 0 || head.y >= canvas.height ||
+        snake.some(segment => segment.x === head.x && segment.y === head.y)
+      ) {
+        gameOver = true;
+        setTimeout(() => {
+          onGameOver();
+        }, 100);
+        return;
+      }
+
+      snake.unshift(head);
+
+      // Comer comida
+      if (head.x === food.x && head.y === food.y) {
+        score++;
+        let newFoodPosition;
+        do {
+          newFoodPosition = {
+            x: Math.floor(Math.random() * 20) * box,
+            y: Math.floor(Math.random() * 20) * box
+          };
+        } while (snake.some(segment => segment.x === newFoodPosition.x && segment.y === newFoodPosition.y));
+        food = newFoodPosition;
+      } else {
+        snake.pop();
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      if (!gameOver) setTimeout(loop, 100);
+    }
+
+    function mostrarOverlay(mensaje, extraHtml = "", tablaHtml = "", mostrarLogout = false) {
+      document.getElementById('mensaje-final').textContent = mensaje;
+      document.getElementById('extra-options').innerHTML = extraHtml;
+      document.getElementById('tabla-puntajes').innerHTML = tablaHtml;
+      document.getElementById('overlay').style.display = 'flex';
+      document.getElementById('logout-btn').style.display = mostrarLogout ? 'inline-block' : 'none';
+    }
+
+    function ocultarOverlay() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('tabla-puntajes').innerHTML = "";
+    }
+
+    function onGameOver() {
+      const username = obtenerUsuarioGuardado();
+      if (!username) {
+        mostrarOverlay(
+          '¡Juego Terminado! Puntuación: ' + score,
+          `<p>¿Quieres crear una cuenta para guardar tu progreso y ver tu historial de puntajes?</p>
+          <button onclick="crearCuenta()">Crear cuenta</button>`
+        );
+      } else {
+        guardarPuntaje(username, score);
+        mostrarTablaFinal(username);
+      }
+    }
+
+    function crearCuenta() {
+      let username = prompt('Elige un nombre de usuario (no hace falta contraseña):');
+      if (!username) {
+        alert('Debes ingresar un nombre de usuario.');
+        return;
+      }
+      guardarUsuario(username);
+      guardarPuntaje(username, score);
+      mostrarTablaFinal(username);
+    }
+
+    function mostrarTablaFinal(username) {
+      const puntajes = obtenerPuntajes(username);
+      let tablaHtml = `<table>
+        <tr><th>#</th><th>Puntaje</th></tr>`;
+      for (let i = 0; i < puntajes.length; i++) {
+        tablaHtml += `<tr><td>${i + 1}</td><td>${puntajes[i]}</td></tr>`;
+      }
+      tablaHtml += `</table>`;
+      mostrarOverlay('¡Juego Terminado! Puntuación: ' + score, "", tablaHtml, true);
+    }
+
+    function reiniciarJuego() {
+      ocultarOverlay();
+      iniciarVariables();
+      loop();
+    }
+
+    function salirJuego() {
+      window.location.reload();
+    }
+    function cerrarSesion() {
+      borrarUsuario();
+      ocultarOverlay();
+      iniciarVariables();
+      loop();
+      alert("Sesión cerrada. Crea un usuario nuevo para guardar tus puntajes.");
+    }
+
+    loop();
+  </script>
+</body>
+</html>

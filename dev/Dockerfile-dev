@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+# Instalamos http-server de manera global
+RUN npm install -g http-server
+
+# Creamos la carpeta de trabajo
+WORKDIR /usr/src/app
+
+# Copiamos el código fuente
+COPY ../app .
+
+# Exponemos el puerto 8080 para desarrollo
+EXPOSE 8080
+
+# Comando para iniciar el servidor de desarrollo
+CMD ["http-server", "-p", "8080", "--cors"]

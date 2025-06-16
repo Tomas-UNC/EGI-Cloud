@@ -1,0 +1,11 @@
+FROM node:20-alpine
+
+RUN npm install -g http-server
+
+WORKDIR /usr/src/app
+
+COPY ../app .
+
+EXPOSE 8080
+
+CMD ["http-server", "-p", "8080", "--cors"]

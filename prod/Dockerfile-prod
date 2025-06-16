@@ -1,0 +1,10 @@
+FROM nginx:alpine
+
+# Copiamos los archivos de la web a la carpeta de Nginx
+COPY ../app /usr/share/nginx/html
+
+# Exponemos el puerto 80 (estándar web)
+EXPOSE 80
+
+# Comando por defecto para Nginx
+CMD ["nginx", "-g", "daemon off;"]

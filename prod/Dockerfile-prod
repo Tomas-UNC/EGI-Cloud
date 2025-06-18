@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
 # Copiamos los archivos de la web a la carpeta de Nginx
-COPY ../app /usr/share/nginx/html
+COPY ../aplicacion /usr/share/nginx/html
 
 # Exponemos el puerto 80 (estándar web)
 EXPOSE 80

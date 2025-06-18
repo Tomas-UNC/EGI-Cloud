@@ -9,5 +9,3 @@ COPY ../aplicacion .
 EXPOSE 8080
 
 CMD ["http-server", "-p", "8080", "-c-1", "-d", "false", "-a", "0.0.0.0", "-o", "snake.html"]
-
-# hola

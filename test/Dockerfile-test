@@ -4,7 +4,7 @@ RUN npm install -g http-server
 
 WORKDIR /usr/src/app
 
-COPY ../app .
+COPY ../aplicacion .
 
 EXPOSE 8080
 
